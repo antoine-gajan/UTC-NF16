@@ -190,6 +190,7 @@ int indexer_fichier(t_Index *index, char *filename)
                     ajouter_noeud(index, noeud);
                     //Ajout de la position à la liste des positions
                     ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase, estMajuscule);
+                    index->nb_mots_differents ++;
                 }
             }
             else
@@ -198,6 +199,7 @@ int indexer_fichier(t_Index *index, char *filename)
                 ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase, estMajuscule);
                 noeud->nb_occurences ++;
             }
+            index->nb_mots_total ++;
 
             //Incrémentation du numéro de phrase si nécessaire
             if (changement_phrase == 1)
@@ -217,6 +219,8 @@ int indexer_fichier(t_Index *index, char *filename)
     return nb_mots;
 }
 
+
+//Fonction qui affiche l'arbre
 void afficher_index(t_Index *index)
 {
     if (index == NULL)
@@ -226,11 +230,24 @@ void afficher_index(t_Index *index)
     }
     else
     {
-        parcoursInfixe(index->racine);
+        parcoursInfixeAffichage(index->racine, NULL);
     }
 }
 
-void parcoursInfixe(t_Noeud *noeud)
+void afficheNoeud(t_Noeud *noeud)
+{
+    // Affichage de l'élément
+    printf("|-- %s\n", noeud->mot);
+    //Affichage de ses occurences
+    for (int i = 1; i < noeud->nb_occurences; i++)
+    {
+        printf("|---- (l: %d, o : %d, p : %d)\n")
+    }
+    printf("|\n");
+}
+
+//Fonction qui parcourt l'arbre
+void parcoursInfixeAffichage(t_Noeud *noeud, char *dernier_car)
 {
     // Si plus de noeud à afficher, on affiche rien
     if (noeud == NULL)
@@ -238,17 +255,56 @@ void parcoursInfixe(t_Noeud *noeud)
         return ;
     }
     // Parcours du sous arbre gauche
-    parcoursInfixe(noeud->filsGauche);
-    // Affichage de l'élément
-    printf("|-- %s\n", noeud->mot);
-    for (int i = 1; i < noeud->nb_occurences; i++)
+    parcoursInfixeAffichage(noeud->filsGauche, dernier_car);
+    //Affichage de l'alphabet si la lettre du mot précédent est différente de celle du mot actuel
+    if (strupr(noeud->mot[0]) != *dernier_car)
     {
-        printf("|---- (l: %d, o : %d, p : %d)\n")
+        //Affichage de la lettre en majuscule
+        printf("%c\n", strupr(noeud->mot[0]));
+        //Modification de la variable globale dernière lettre
+        *dernier_car = strupr(noeud->mot[0]);
     }
-    printf("|\n");
+    afficheNoeud(noeud);
     // Parcours du sous arbre droit
-    parcoursInfixe(noeud->filsDroit);
+    parcoursInfixeAffichage(noeud->filsDroit, dernier_car);
 }
 
+void afficher_max_apparition(t_Index *index)
+{
+    t_Noeud *noeud_max = NULL
+    parcoursInfixeMaxOccurences(index->racine, noeud_max);
+    if (noeud_max != NULL)
+    {
+        printf("Mot apparaissant le plus dans le texte : %s\n", noeud_max->mot);
+        printf("Nombre d'occurences : %d\n", noeud_max->nb_occurences);
+    }
+
+}
+
+void parcoursInfixeMaxOccurences(t_Noeud *noeud, t_noeud *noeud_max)
+{
+    if (noeud == NULL)
+    {
+        return ;
+    }
+    //Parcours du sous arbre gauche
+    parcoursInfixeMaxOccurences(noeud->filsGauche, noeud_max);
+    if (noeud_max == NULL)
+    {
+        noeud_max = noeud;
+    }
+    //Si le nombre d'occurences du mot du noeud actuel est supérieur au max
+    else if (noeud->nb_occurences > noeud_max->nb_occurences)
+    {
+        //Changement de la variable globale noeud_max contenant le noeud du mot le plus présent dans le texte
+        noeud_max = noeud;
+    }
+    //Parcours du sous arbre droit
+    parcoursInfixeMaxOccurences(noeud->filsDroit, noeud_max)
+}
+
+
+void afficher_occurences_mot(t_Index *index, char *mot)
+void afficher_occurences_mot(t_Index *index, char *mot)
 
 #endif // TP4_H
