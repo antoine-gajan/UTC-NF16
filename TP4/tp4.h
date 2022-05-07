@@ -4,6 +4,7 @@ typedef struct t_position
     int numero_ligne;
     int ordre;
     int numero_phrase;
+    int EstMajuscule;
     struct t_position* suivant;
 } t_position;
 
@@ -66,4 +67,3 @@ void afficher_max_apparition(t_Index *index);
 void afficher_occurences_mot(t_Index *index, char *mot);
 
 
-void construire_texte(t_Index *index, char *filename);
