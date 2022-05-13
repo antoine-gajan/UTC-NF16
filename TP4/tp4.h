@@ -39,6 +39,35 @@ typedef struct t_index
 typedef t_index t_Index;
 
 
+
+//Structures supplémentaires (question 9)
+
+typedef struct t_Texte
+{
+    t_Phrase *premier;
+}t_Texte;
+
+typedef struct t_Phrase
+{
+    t_Mot *premier;
+    int num_phrase;
+    t_Phrase *suivant;
+}t_Phrase;
+
+typedef struct t_Mot
+{
+    char *mot;
+    int position;
+    struct t_Mot *suivant;
+}t_Mot;
+
+
+
+
+
+
+
+
 // B. Fonctions à implémenter
 t_ListePositions* creer_liste_positions();
 
@@ -67,3 +96,7 @@ void afficher_max_apparition(t_Index *index);
 void afficher_occurences_mot(t_Index *index, char *mot);
 
 
+//Fonctions supplémentaires
+t_Noeud* max_occurences(t_Noeud *noeud);
+void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car);
+void afficheNoeud(t_Noeud *noeud);
