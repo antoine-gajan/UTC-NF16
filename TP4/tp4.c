@@ -2,8 +2,10 @@
 #define TP4_H
 
 #include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include "tp4.h"
-
+#define TAILLE_MAX 10000
 
 
 t_ListePositions* creer_liste_positions()
@@ -20,7 +22,7 @@ t_ListePositions* creer_liste_positions()
     return liste;
 }
 
-int ajouter_position(t_ListePositions *listeP, int ligne, int ordre, int num_phrase, int estMajuscule)
+int ajouter_position(t_ListePositions *listeP, int ligne, int ordre, int num_phrase)
 {
     if (listeP == NULL || ligne <= 0 || ordre <= 0 || num_phrase <= 0)
     {
@@ -35,7 +37,7 @@ int ajouter_position(t_ListePositions *listeP, int ligne, int ordre, int num_phr
     pos->numero_ligne = ligne;
     pos->numero_phrase = num_phrase;
     pos->ordre = ordre;
-    pos->EstMajuscule = estMajuscule;
+    pos->suivant = NULL;
     //Si la liste est vide, ajout en début de liste
     if (listeP->debut == NULL)
     {
@@ -47,16 +49,16 @@ int ajouter_position(t_ListePositions *listeP, int ligne, int ordre, int num_phr
         t_position *prec = NULL;
         t_position *actuel = listeP->debut;
         //Ordre par numéro de ligne
-        while (actuel != NULL && pos->numero_ligne < actuel->numero_ligne)
+        while (actuel != NULL && pos->numero_ligne > actuel->numero_ligne)
         {
             prec = actuel;
             actuel = actuel->suivant;
         }
         //Ordre par ordre du mot dans la ligne
-        while(actuel != NULL && pos->ordre < actuel->ordre)
+        while(actuel != NULL && pos->ordre > actuel->ordre)
         {
             prec = actuel;
-            actuel = actuel->suivant
+            actuel = actuel->suivant;
         }
         //Si on doit l'ajouter en tant que premier élément
         if (prec == NULL)
@@ -70,6 +72,7 @@ int ajouter_position(t_ListePositions *listeP, int ligne, int ordre, int num_phr
         }
         pos->suivant = actuel;
     }
+    listeP->nb_elements ++;
     return 1;
 }
 
@@ -88,7 +91,7 @@ t_Index* creer_index()
 
 t_Noeud* rechercher_mot(t_Index *index, char *mot)
 {
-    mot = strlwr(mot);
+    to_minuscule(mot);
     if(index == NULL)
     {
         return NULL;
@@ -96,6 +99,10 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot)
     t_Noeud *actuel = index->racine;
     while (actuel != NULL && strcmp(actuel->mot, mot) != 0)
     {
+        if (strcmp(actuel->mot, mot) == 0)
+        {
+            return actuel;
+        }
         if (strcmp(actuel->mot, mot) < 0)
         {
             actuel = actuel->filsGauche;
@@ -105,7 +112,7 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot)
             actuel = actuel->filsDroit;
         }
     }
-    return actuel;
+    return NULL;
 }
 
 int ajouter_noeud(t_Index *index, t_Noeud *noeud)
@@ -116,16 +123,23 @@ int ajouter_noeud(t_Index *index, t_Noeud *noeud)
     }
     t_Noeud *pere = NULL;
     t_Noeud *actuel = index->racine;
+    //Si l'arbre est vide
+    if (actuel == NULL)
+    {
+        index->racine = noeud;
+        return 1;
+    }
+    //Parcours de l'arbre pour trouver où ajouter l'élément
     while (actuel != NULL)
     {
         pere = actuel;
         if (strcmp(actuel->mot, noeud->mot) < 0)
         {
-            actuel = actuel->filsGauche;
+            actuel = actuel->filsDroit;
         }
         else
         {
-            actuel = actuel->filsDroit;
+            actuel = actuel->filsGauche;
         }
     }
     if (strcmp(pere->mot, noeud->mot) < 0)
@@ -136,6 +150,9 @@ int ajouter_noeud(t_Index *index, t_Noeud *noeud)
     {
         actuel->filsGauche = noeud;
     }
+    //Mise à jour des attributs de l'index
+    index->nb_mots_differents ++;
+    index->nb_mots_total ++;
     return 1;
 }
 
@@ -168,19 +185,17 @@ int indexer_fichier(t_Index *index, char *filename, t_Texte *texte)
             //Initialisation d'un booléen de changement de phrase à 0
             int changement_phrase = 0;
             //Conversion en minuscules
-            char *mot_nouveau = strlwr(mot);
-            //Occurence du mot est en majuscule ?
-            int estMajuscule = (mot_nouveau != mot);
+            to_minuscule(mot);
             //S'il y a un point dans le mot (fin de la phrase)
-            if (strchr(mot_nouveau, '.') != NULL)
+            if (strchr(mot, '.') != NULL)
             {
                 //On enlève le point collé au mot
-                int size = strlen(mot_nouveau);
-                mot_nouveau[size-1] = '\0';
+                int size = strlen(mot);
+                mot[size-1] = '\0';
                 changement_phrase = 1;
             }
             //Si le mot n'est pas dans l'arbre
-            t_noeud *noeud = rechercher_mot(index, mot_nouveau);
+            t_noeud *noeud = rechercher_mot(index, mot);
 
             if ( noeud == NULL)
             {
@@ -188,24 +203,26 @@ int indexer_fichier(t_Index *index, char *filename, t_Texte *texte)
                 //Si l'allocation dynamique a fonctionné
                 if (noeud != NULL)
                 {
-                    noeud->mot = mot_nouveau;
+                    noeud->mot = mot;
                     noeud->nb_occurences = 1;
-                    noeud->positions->debut = NULL;
-                    noeud->positions->nb_elements = 0;
+                    noeud->positions.debut = NULL;
+                    noeud->positions.nb_elements = 0;
+                    noeud->filsGauche = NULL;
+                    noeud->filsDroit = NULL;
                     //Ajout du noeud à l'arbre
                     ajouter_noeud(index, noeud);
                     //Ajout de la position à la liste des positions
-                    ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase, estMajuscule);
-                    index->nb_mots_differents ++;
+                    ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase);
                 }
             }
             else
             {
                 //Ajout de la position à la liste des positions
-                ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase, estMajuscule);
+                ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase);
                 noeud->nb_occurences ++;
+                //Mise à jour des attributs de l'index
+                index->nb_mots_total ++;
             }
-            index->nb_mots_total ++;
             //Ajout du mot dans la phrase
             t_Mot *mot_phrase = malloc(sizeof(t_Mot));
             mot_phrase->mot = mot;
@@ -248,7 +265,8 @@ void afficher_index(t_Index *index)
     }
     else
     {
-        parcoursInfixeAffichage(index->racine, NULL);
+        printf("Début affiche");
+        parcours_infixe_affichage(index->racine, NULL);
     }
 }
 
@@ -259,7 +277,7 @@ void afficheNoeud(t_Noeud *noeud)
     //Affichage de ses occurences
     for (int i = 1; i < noeud->nb_occurences; i++)
     {
-        printf("|---- (l: %d, o : %d, p : %d)\n")
+        printf("|---- (l: %d, o : %d, p : %d)\n");
     }
     printf("|\n");
 }
@@ -273,7 +291,7 @@ void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car)
         return ;
     }
     // Parcours du sous arbre gauche
-    parcoursInfixeAffichage(noeud->filsGauche, dernier_car);
+    parcours_infixe_affichage(noeud->filsGauche, dernier_car);
     //Affichage de l'alphabet si la lettre du mot précédent est différente de celle du mot actuel
     if (strupr(noeud->mot[0]) != *dernier_car)
     {
@@ -284,7 +302,7 @@ void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car)
     }
     afficheNoeud(noeud);
     // Parcours du sous arbre droit
-    parcoursInfixeAffichage(noeud->filsDroit, dernier_car);
+    parcours_infixe_affichage(noeud->filsDroit, dernier_car);
 }
 
 void afficher_max_apparition(t_Index *index)
@@ -414,4 +432,22 @@ void ajouterPhraseDansListePhrase(t_Texte *texte, t_Phrase *phrase)
     prec->suivant = phrase;
 }
 
+t_Texte* creer_texte()
+{
+    t_Texte *texte = malloc(sizeof(t_Texte));
+    if (texte != NULL)
+    {
+        texte->premier = NULL;
+    }
+    return texte;
+}
+
+
+void to_minuscule(char *chaine)
+{
+    for (int i = 0; i < strlen(chaine); i++)
+    {
+        chaine[i] = tolower((unsigned int)chaine[i]);
+    }
+}
 #endif // TP4_H

@@ -1,10 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 // A. Structures de données
 typedef struct t_position
 {
     int numero_ligne;
     int ordre;
     int numero_phrase;
-    int EstMajuscule;
     struct t_position* suivant;
 } t_position;
 
@@ -42,18 +44,6 @@ typedef t_index t_Index;
 
 //Structures supplémentaires (question 9)
 
-typedef struct t_Texte
-{
-    t_Phrase *premier;
-}t_Texte;
-
-typedef struct t_Phrase
-{
-    t_Mot *premier;
-    int num_phrase;
-    t_Phrase *suivant;
-}t_Phrase;
-
 typedef struct t_Mot
 {
     char *mot;
@@ -61,8 +51,18 @@ typedef struct t_Mot
     struct t_Mot *suivant;
 }t_Mot;
 
+typedef struct t_Phrase
+{
+    t_Mot *premier;
+    int num_phrase;
+    struct t_Phrase *suivant;
+}t_Phrase;
 
 
+typedef struct t_Texte
+{
+    t_Phrase *premier;
+}t_Texte;
 
 
 
@@ -84,7 +84,7 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot);
 int ajouter_noeud(t_Index *index, t_Noeud *noeud);
 
 //lecture fichier
-int indexer_fichier(t_Index *index, char *filename);
+int indexer_fichier(t_Index *index, char *filename, t_Texte *texte);
 
 //Affichage de l'arbre, while sur fichier, while sur phrase et tant que pas point, test si mot est présent test si retour à la ligne
 void afficher_index(t_Index *index);
@@ -100,3 +100,8 @@ void afficher_occurences_mot(t_Index *index, char *mot);
 t_Noeud* max_occurences(t_Noeud *noeud);
 void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car);
 void afficheNoeud(t_Noeud *noeud);
+t_Texte* creer_texte();
+void to_minuscule(char *chaine);
+
+
+
