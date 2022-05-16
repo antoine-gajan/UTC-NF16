@@ -24,45 +24,35 @@ typedef struct t_noeud
 {
     char *mot;
     int nb_occurences;
-    t_ListePositions positions;
+    t_ListePositions *positions;
     struct t_noeud *filsGauche;
     struct t_noeud *filsDroit;
 }t_noeud;
 
 typedef t_noeud t_Noeud;
 
-typedef struct t_index
-{
+//Structures supplémentaires (question 9)
+
+typedef struct t_Phrase{
+    char *mot;
+    struct t_Phrase *suivant;
+} t_Phrase;
+
+typedef struct t_ListePhrases{
+    t_Phrase *phrase;
+    struct t_ListePhrases *suivant;
+}t_ListePhrases;
+
+//Structure index modifié pour question 9 et 10
+typedef struct t_Index{
     t_Noeud *racine;
     int nb_mots_differents;
     int nb_mots_total;
-}t_index;
+    t_ListePhrases *liste_phrases;
+    t_ListePhrases *liste_lignes;
+}t_Index;
 
-typedef t_index t_Index;
-
-
-
-//Structures supplémentaires (question 9)
-
-typedef struct t_Mot
-{
-    char *mot;
-    int position;
-    struct t_Mot *suivant;
-}t_Mot;
-
-typedef struct t_Phrase
-{
-    t_Mot *premier;
-    int num_phrase;
-    struct t_Phrase *suivant;
-}t_Phrase;
-
-
-typedef struct t_Texte
-{
-    t_Phrase *premier;
-}t_Texte;
+typedef t_Index t_index;
 
 
 
@@ -84,7 +74,7 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot);
 int ajouter_noeud(t_Index *index, t_Noeud *noeud);
 
 //lecture fichier
-int indexer_fichier(t_Index *index, char *filename, t_Texte *texte);
+int indexer_fichier(t_Index *index, char *filename);
 
 //Affichage de l'arbre, while sur fichier, while sur phrase et tant que pas point, test si mot est présent test si retour à la ligne
 void afficher_index(t_Index *index);
@@ -98,10 +88,17 @@ void afficher_occurences_mot(t_Index *index, char *mot);
 
 //Fonctions supplémentaires
 t_Noeud* max_occurences(t_Noeud *noeud);
+t_Phrase *initialiser_phrase(char * mot);
 void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car);
 void afficheNoeud(t_Noeud *noeud);
-t_Texte* creer_texte();
+void ajouter_phrase(t_Index* index, t_Phrase *phrase);
+void ajouter_mot(t_Phrase *liste, char *mot);
+void ajouter_ligne(t_Index *index, t_Phrase *phrase);
+void construire_texte(t_Index *index, char *filename);
+
 void to_minuscule(char *chaine);
+char majuscule(char c);
+
 
 
 

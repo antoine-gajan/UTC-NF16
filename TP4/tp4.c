@@ -3,16 +3,15 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include "tp4.h"
-#define TAILLE_MAX 10000
+#define TAILLE_MAX 1000
 
 
 t_ListePositions* creer_liste_positions()
 {
     //Allocation dynamique
     t_ListePositions* liste = malloc(sizeof(t_ListePositions));
-    //Vérification de l'espace mémoire
+    //VÃ©rification de l'espace mÃ©moire
     if (liste != NULL)
     {
         liste->debut = NULL;
@@ -38,39 +37,45 @@ int ajouter_position(t_ListePositions *listeP, int ligne, int ordre, int num_phr
     pos->numero_phrase = num_phrase;
     pos->ordre = ordre;
     pos->suivant = NULL;
-    //Si la liste est vide, ajout en début de liste
+    //Si la liste est vide, ajout en dÃ©but de liste
     if (listeP->debut == NULL)
     {
         listeP->debut = pos;
     }
-    //Si liste non vide, parcours pour savoir où on ajoute
+    //Si liste non vide, parcours pour savoir oÃ¹ on ajoute
     else
     {
         t_position *prec = NULL;
         t_position *actuel = listeP->debut;
-        //Ordre par numéro de ligne
-        while (actuel != NULL && pos->numero_ligne > actuel->numero_ligne)
+
+        //Ordre par numÃ©ro de ligne et ordre du mot dans la ligne
+        while (actuel!=NULL && (actuel->numero_ligne < ligne || actuel->ordre < ordre))
+            {
+                prec = actuel;
+                actuel=actuel->suivant;
+            }
+        if (actuel != NULL && actuel->numero_ligne == ligne && actuel->ordre == ordre)
         {
-            prec = actuel;
-            actuel = actuel->suivant;
+            printf("Erreur: position dejÃ  existante\n");
+            return 0;
         }
-        //Ordre par ordre du mot dans la ligne
-        while(actuel != NULL && pos->ordre > actuel->ordre)
-        {
-            prec = actuel;
-            actuel = actuel->suivant;
-        }
-        //Si on doit l'ajouter en tant que premier élément
+        //Ajout au dÃ©but et liste non vide
         if (prec == NULL)
         {
+            pos->suivant = listeP->debut;
             listeP->debut = pos;
         }
-        //Ajout en milieu ou fin de liste
+        //Ajout en fin de liste
+        else if(actuel == NULL)
+        {
+            prec->suivant=pos;
+        }
+        //Ajout en milieu de liste
         else
         {
-            prec->suivant = pos;
+            pos->suivant=actuel;
+            prec->suivant=pos;
         }
-        pos->suivant = actuel;
     }
     listeP->nb_elements ++;
     return 1;
@@ -85,6 +90,8 @@ t_Index* creer_index()
         arbre->racine = NULL;
         arbre->nb_mots_total = 0;
         arbre->nb_mots_differents = 0;
+        arbre->liste_lignes = NULL;
+        arbre->liste_phrases = NULL;
     }
     return arbre;
 }
@@ -99,11 +106,7 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot)
     t_Noeud *actuel = index->racine;
     while (actuel != NULL && strcmp(actuel->mot, mot) != 0)
     {
-        if (strcmp(actuel->mot, mot) == 0)
-        {
-            return actuel;
-        }
-        if (strcmp(actuel->mot, mot) < 0)
+        if (strcmp(actuel->mot, mot) > 0)
         {
             actuel = actuel->filsGauche;
         }
@@ -112,148 +115,179 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot)
             actuel = actuel->filsDroit;
         }
     }
-    return NULL;
+    return actuel;
 }
 
 int ajouter_noeud(t_Index *index, t_Noeud *noeud)
 {
-    if (index == NULL || noeud == NULL)
+    if(rechercher_mot(index,noeud->mot)==NULL)
     {
-        return 0;
-    }
-    t_Noeud *pere = NULL;
-    t_Noeud *actuel = index->racine;
-    //Si l'arbre est vide
-    if (actuel == NULL)
-    {
-        index->racine = noeud;
-        return 1;
-    }
-    //Parcours de l'arbre pour trouver où ajouter l'élément
-    while (actuel != NULL)
-    {
-        pere = actuel;
-        if (strcmp(actuel->mot, noeud->mot) < 0)
+        t_Noeud *pere=NULL;
+        t_Noeud *actuel=index->racine;
+        while(actuel!=NULL)
         {
-            actuel = actuel->filsDroit;
+            pere=actuel;
+            if(strcmp(actuel->mot,noeud->mot)>0)
+            {
+                actuel=actuel->filsGauche;
+            }
+            else
+            {
+                actuel=actuel->filsDroit;
+            }
+        }
+        if(pere==NULL)
+        {
+            index->racine = noeud;
         }
         else
         {
-            actuel = actuel->filsGauche;
+            if(strcmp(pere->mot,noeud->mot) > 0)
+            {
+                pere->filsGauche = noeud;
+            }
+            else
+            {
+                pere->filsDroit = noeud;
+            }
         }
-    }
-    if (strcmp(pere->mot, noeud->mot) < 0)
-    {
-        actuel->filsDroit = noeud;
+        return 1;
     }
     else
     {
-        actuel->filsGauche = noeud;
-    }
-    //Mise à jour des attributs de l'index
-    index->nb_mots_differents ++;
-    index->nb_mots_total ++;
-    return 1;
-}
-
-int indexer_fichier(t_Index *index, char *filename, t_Texte *texte)
-{
-    FILE *fichier = fopen(filename, "r");
-    if (fichier == NULL)
-    {
+        printf("Erreur: noeud dejÃ  existant\n");
         return 0;
     }
-    char ligne[TAILLE_MAX] = "";
-    //Définition des variables
-    int num_ligne = 1;
-    int ordre = 1;
-    int num_phrase = 1;
-    int nb_mots = 0;
-    //Création de la première phrase du texte
-    t_Phrase *phrase = malloc(sizeof(t_Phrase));
-    phrase->premier = NULL;
-    phrase->num_phrase = num_phrase;
-    phrase->suivant = NULL;
-    ajouterPhraseDansListePhrase(texte, phrase);
-    //Parcours du fichier ligne par ligne
-    while(fgets(ligne, TAILLE_MAX, fichier))
-    {
-        char *mot = strtok(ligne, " ");
-        while (mot != NULL)
-        {
-            nb_mots ++;
-            //Initialisation d'un booléen de changement de phrase à 0
-            int changement_phrase = 0;
-            //Conversion en minuscules
-            to_minuscule(mot);
-            //S'il y a un point dans le mot (fin de la phrase)
-            if (strchr(mot, '.') != NULL)
-            {
-                //On enlève le point collé au mot
-                int size = strlen(mot);
-                mot[size-1] = '\0';
-                changement_phrase = 1;
-            }
-            //Si le mot n'est pas dans l'arbre
-            t_noeud *noeud = rechercher_mot(index, mot);
-
-            if ( noeud == NULL)
-            {
-                noeud = malloc(sizeof(t_noeud));
-                //Si l'allocation dynamique a fonctionné
-                if (noeud != NULL)
-                {
-                    noeud->mot = mot;
-                    noeud->nb_occurences = 1;
-                    noeud->positions.debut = NULL;
-                    noeud->positions.nb_elements = 0;
-                    noeud->filsGauche = NULL;
-                    noeud->filsDroit = NULL;
-                    //Ajout du noeud à l'arbre
-                    ajouter_noeud(index, noeud);
-                    //Ajout de la position à la liste des positions
-                    ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase);
-                }
-            }
-            else
-            {
-                //Ajout de la position à la liste des positions
-                ajouter_position(&(noeud->positions), num_ligne, ordre, num_phrase);
-                noeud->nb_occurences ++;
-                //Mise à jour des attributs de l'index
-                index->nb_mots_total ++;
-            }
-            //Ajout du mot dans la phrase
-            t_Mot *mot_phrase = malloc(sizeof(t_Mot));
-            mot_phrase->mot = mot;
-            mot_phrase->position = ordre;
-            ajouterMotDansPhrase(phrase, mot_phrase);
-
-            //Incrémentation du numéro de phrase si nécessaire
-            if (changement_phrase == 1)
-            {
-                num_phrase ++;
-                ordre = 1;
-                //Création de la nouvelle phrase
-                phrase = malloc(sizeof(t_Phrase));
-                phrase->num_phrase = num_phrase;
-                phrase->premier = NULL;
-                phrase->suivant = NULL;
-                //Si changement de phrase, on ajoute une phrase au texte
-                ajouterPhraseDansListePhrase(texte, phrase);
-            }
-            else
-            {
-                ordre ++;
-            }
-            mot = strtok(NULL, " ");
-        }
-        num_ligne ++;
-    }
-    fclose(fichier);
-    return nb_mots;
 }
 
+int indexer_fichier(t_Index *index, char *filename)
+{
+    int nb_mots=1;
+    int num_phrase=1;
+    FILE* fichier = NULL;
+    char chaine[TAILLE_MAX] = "";
+    unsigned long taille;
+    int changer_phrase=0;
+    t_Phrase *phrase_courante=NULL;
+    int nouvelle_phrase=1;
+    t_Phrase *ligne_courante=NULL;
+    int nouvelle_ligne=1;
+
+    fichier = fopen(filename, "r");
+
+    if (fichier != NULL)
+    {
+        int ligne=1;
+        int ordre;
+        const char *sep = " ";
+
+        while (fgets(chaine, TAILLE_MAX, fichier) != NULL)
+        {
+            ordre=1;
+            to_minuscule(chaine);
+            printf("Ligne %d : %s\n", ligne, chaine); //Test debug
+
+            taille = strlen(chaine);
+            if (chaine[taille - 1] == '\n')
+            {
+                chaine[taille - 1] = '\0';
+            }
+
+            char *mot = strtok (chaine, sep);
+            while (mot != NULL)
+            {
+                taille = strlen(mot);
+                if (mot[taille-1] == '.')
+                {
+                    mot[taille - 1] = '\0';
+                    changer_phrase=1;
+                }
+
+                printf ("Mot ajoute : %s\n", mot); //test debug
+
+                t_Noeud *noeud = rechercher_mot(index, mot);
+
+                //Si le mot n'est pas dans l'index, creation du noeud
+                if (noeud==NULL)
+                {
+                    noeud=malloc(sizeof(t_Noeud));
+                    t_ListePositions *listeP = creer_liste_positions();
+                    if(noeud != NULL && listeP != NULL)
+                    {
+                        noeud->mot = malloc(sizeof(mot));
+                        strcpy(noeud->mot, mot);
+
+                        noeud->nb_occurences=1;
+
+                        noeud->filsGauche=NULL;
+                        noeud->filsDroit=NULL;
+
+                        ajouter_position(listeP, ligne, ordre, num_phrase);
+                        noeud->positions = listeP;
+
+                        ajouter_noeud(index, noeud);
+
+                        index->nb_mots_differents++;
+                        index->nb_mots_total++;
+                    }
+                    else
+                    {
+                        printf("Erreur: allocation memoire\n");
+                        return 0;
+                    }
+                }
+                //Si le mot existe dans l'index, ajout de la position
+                else
+                {
+                    noeud->nb_occurences++;
+                    ajouter_position(noeud->positions, ligne, ordre, num_phrase);
+                    index->nb_mots_total++;
+                }
+
+                if (nouvelle_phrase==1)
+                {
+                    phrase_courante = initialiser_phrase(mot);
+                    nouvelle_phrase=0;
+                }
+                else
+                {
+                    ajouter_mot(phrase_courante,mot);
+                }
+
+                if (nouvelle_ligne==1)
+                {
+                    ligne_courante = initialiser_phrase(mot);
+                    nouvelle_ligne=0;
+                }
+                else
+                {
+                    ajouter_mot(ligne_courante,mot);
+                }
+
+                mot = strtok(NULL, sep);
+                ordre++;
+                nb_mots++;
+                if (changer_phrase==1)
+                {
+                    ajouter_phrase(index,phrase_courante);
+                    num_phrase++;
+                    changer_phrase = 0;
+                    nouvelle_phrase=1;
+                }
+            }
+            ligne++;
+            ajouter_ligne(index,ligne_courante);
+            nouvelle_ligne=1;
+        }
+        fclose(fichier);
+        return nb_mots;
+    }
+    else
+    {
+        printf("Erreur: fichier non trouve\n");
+        return 0;
+    }
+}
 
 //Fonction qui affiche l'arbre
 void afficher_index(t_Index *index)
@@ -265,19 +299,21 @@ void afficher_index(t_Index *index)
     }
     else
     {
-        printf("Début affiche");
-        parcours_infixe_affichage(index->racine, NULL);
+        char dernier[] = "(";
+        parcours_infixe_affichage(index->racine, dernier);
     }
 }
 
 void afficheNoeud(t_Noeud *noeud)
 {
-    // Affichage de l'élément
+    // Affichage de l'Ã©lÃ©ment
     printf("|-- %s\n", noeud->mot);
     //Affichage de ses occurences
-    for (int i = 1; i < noeud->nb_occurences; i++)
+    t_Position *pos = noeud->positions->debut;
+    while (pos != NULL)
     {
-        printf("|---- (l: %d, o : %d, p : %d)\n");
+        printf("|---- (l: %d, o : %d, p : %d)\n", pos->numero_ligne, pos->ordre, pos->numero_phrase);
+        pos = pos->suivant;
     }
     printf("|\n");
 }
@@ -285,22 +321,24 @@ void afficheNoeud(t_Noeud *noeud)
 //Fonction qui parcourt l'arbre
 void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car)
 {
-    // Si plus de noeud à afficher, on affiche rien
+    // Si plus de noeud Ã  afficher, on affiche rien
     if (noeud == NULL)
     {
-        return ;
+        return;
     }
     // Parcours du sous arbre gauche
     parcours_infixe_affichage(noeud->filsGauche, dernier_car);
-    //Affichage de l'alphabet si la lettre du mot précédent est différente de celle du mot actuel
-    if (strupr(noeud->mot[0]) != *dernier_car)
+    //Affichage de l'alphabet si la lettre du mot prÃ©cÃ©dent est diffÃ©rente de celle du mot actuel
+    if (*dernier_car == '(' || majuscule((noeud->mot)[0]) != *dernier_car)
     {
-        //Affichage de la lettre en majuscule
-        printf("%c\n", strupr(noeud->mot[0]));
-        //Modification de la variable globale dernière lettre
-        *dernier_car = strupr(noeud->mot[0]);
+        printf("\n%c\n", majuscule((noeud->mot)[0]));
+        *dernier_car = majuscule((noeud->mot)[0]);
+        afficheNoeud(noeud);
     }
-    afficheNoeud(noeud);
+    else
+    {
+        afficheNoeud(noeud);
+    }
     // Parcours du sous arbre droit
     parcours_infixe_affichage(noeud->filsDroit, dernier_car);
 }
@@ -316,13 +354,13 @@ void afficher_max_apparition(t_Index *index)
     t_Noeud *noeud_max = max_occurences(index->racine);
     if (noeud_max != NULL)
     {
-        //Affichage de ses caractéristiques
+        //Affichage de ses caractÃ©ristiques
         printf("Mot apparaissant le plus dans le texte : %s\n", noeud_max->mot);
         printf("Nombre d'occurences : %d\n", noeud_max->nb_occurences);
     }
 }
 
-//Fonction récursive qui renvoie le noeud ayant le maximum d'occurences sur un arbre
+//Fonction rÃ©cursive qui renvoie le noeud ayant le maximum d'occurences sur un arbre
 t_Noeud* max_occurences(t_Noeud *noeud)
 {
     //Si le noeud est vide, pas de noeud ayant un mot avec le maximum d'occurences
@@ -375,79 +413,227 @@ t_Noeud* max_occurences(t_Noeud *noeud)
             return noeud;
         }
     }
-    //Sinon, on retourne le noeud père, seul noeud de l'arbre car on a atteint une feuille
+    //Sinon, on retourne le noeud pÃ¨re, seul noeud de l'arbre car on a atteint une feuille
     else
     {
         return noeud;
     }
 }
 
+t_Phrase *initialiser_phrase(char * mot)
+{
+    t_Phrase *phrase = malloc(sizeof(phrase));
+    if (phrase != NULL)
+    {
+        phrase->mot = malloc(strlen(mot) * sizeof(char));
+        strcpy(phrase->mot, mot);
+        phrase->suivant = NULL;
+    }
+    return phrase;
+}
+
+void ajouter_mot(t_Phrase *liste, char *mot)
+{
+    if (liste != NULL)
+    {
+        if (liste->suivant == NULL)
+        {
+            liste->suivant = initialiser_phrase(mot);
+        }
+        else
+        {
+            ajouter_mot(liste->suivant, mot);
+        }
+    }
+}
+
+void ajouter_phrase(t_Index *index, t_Phrase *phrase)
+{
+    t_ListePhrases * nouv = malloc(sizeof(t_ListePhrases));
+    if (nouv != NULL)
+    {
+        nouv->phrase = phrase;
+        nouv->suivant = NULL;
+        if (index->liste_phrases == NULL)
+        {
+            index->liste_phrases = nouv;
+        }
+        else
+        {
+            t_ListePhrases *courant = index->liste_phrases;
+            while (courant->suivant != NULL)
+            {
+                courant = courant->suivant;
+            }
+            courant->suivant = nouv;
+        }
+    }
+}
+
+void ajouter_ligne(t_Index *index, t_Phrase *p)
+{
+    t_ListePhrases * nouv = malloc(sizeof(t_ListePhrases));
+    if (nouv != NULL)
+    {
+        nouv->phrase = p;
+        nouv->suivant = NULL;
+        if (index->liste_lignes == NULL)
+        {
+            index->liste_lignes = nouv;
+        }
+        else
+        {
+            t_ListePhrases *courant = index->liste_lignes;
+            while (courant->suivant != NULL)
+            {
+                courant = courant->suivant;
+            }
+            courant->suivant = nouv;
+        }
+    }
+}
+
 void afficher_occurences_mot(t_Index *index, char *mot)
 {
-    t_Noeud *noeudAafficher = rechercher_mot(index, mot);
-    printf("Mot = \"%s\"\n", noeudAafficher->mot);
-    printf("Occurences = %d\n", noeudAafficher->nb_occurences);
-
+    int debut_phrase;
+    int i = 1;
+    t_ListePhrases *p = index->liste_phrases;
+    t_Phrase *m = NULL;
+    to_minuscule(mot);
+    t_Noeud *noeud = rechercher_mot(index, mot);
+    if (noeud != NULL)
+    {
+        mot[0] = majuscule(mot[0]);
+        printf("Mot = \"%s\"\n", mot);
+        printf("Occurences = %d\n", noeud->nb_occurences);
+        t_Position *pos = noeud->positions->debut;
+        while (pos != NULL)
+        {
+            debut_phrase = 1;
+            while (i < pos->numero_phrase)
+            {
+                p = p->suivant;
+                i++;
+            }
+            printf("| Ligne %d, mot %d : ", pos->numero_ligne, pos->ordre);
+            m = p->phrase;
+            while (m != NULL)
+            {
+                if (debut_phrase)
+                {
+                    m->mot[0] = majuscule(m->mot[0]);
+                    printf("%s", m->mot);
+                    to_minuscule(m->mot);
+                    debut_phrase = 0;
+                }
+                else
+                {
+                    printf("%s", m->mot);
+                }
+                if (m->suivant != NULL)
+                {
+                    printf(" ");
+                }
+                m = m->suivant;
+            }
+            printf(".\n");
+            pos = pos->suivant;
+        }
+    }
+    else
+    {
+        printf("Le mot '%s' n'est pas dans l'index\n", mot);
+    }
 }
 
-void ajouterMotDansPhrase(t_Phrase *phrase, t_Mot *mot)
+void construire_texte(t_Index *index, char *filename)
 {
-    if (phrase == NULL || mot == NULL)
+    int debut_phrase = 1;
+    FILE *f = fopen(filename, "w");
+    if (f != NULL)
     {
-        return ;
-    }
-    t_Mot *actuel = phrase->premier;
-    t_Mot *prec = NULL;
-    while(actuel != NULL && actuel->position < mot->position)
-    {
-        prec = actuel;
-        actuel = actuel->suivant;
-    }
-    if (prec == NULL)
-    {
-        phrase->premier = mot;
-    }
-    mot->suivant = actuel;
-    prec->suivant = mot;
-}
+        t_ListePhrases *l = index->liste_lignes;
+        t_ListePhrases *lp = index->liste_phrases;
+        t_Phrase *m = lp->phrase;
 
-void ajouterPhraseDansListePhrase(t_Texte *texte, t_Phrase *phrase)
-{
-    if (phrase == NULL || phrase == NULL)
-    {
-        return ;
+        while (l != NULL)
+        {
+            t_Phrase *p = l->phrase;
+            while (p != NULL)
+            {
+                if (m->suivant != NULL)
+                {
+                    m = m->suivant;
+                    if (debut_phrase == 1)
+                    {
+                        p->mot[0] = majuscule(p->mot[0]);
+                        fprintf(f, "%s ", p->mot);
+                        to_minuscule(p->mot);
+                        debut_phrase = 0;
+                    }
+                    else
+                    {
+                        fprintf(f, "%s ", p->mot);
+                    }
+                }
+                else
+                {
+                    lp = lp->suivant;
+                    if (lp != NULL)
+                    {
+                        m = lp->phrase;
+                    }
+                    if (debut_phrase == 1)
+                    {
+                        p->mot[0] = majuscule(p->mot[0]);
+                        fprintf(f, "%s. ", p->mot);
+                        to_minuscule(p->mot);
+                    }
+                    else
+                    {
+                        fprintf(f, "%s. ", p->mot);
+                        debut_phrase = 1;
+                    }
+                }
+                p = p->suivant;
+            }
+            fprintf(f, "\n");
+            l = l->suivant;
+        }
+        fclose(f);
     }
-    t_Phrase *actuel = texte->premier;
-    t_Phrase *prec = NULL;
-    while(actuel != NULL && actuel->num_phrase < phrase->num_phrase)
+    else
     {
-        prec = actuel;
-        actuel = actuel->suivant;
+        printf("Erreur lors de l'ouverture du fichier\n");
     }
-    if (prec == NULL)
-    {
-        texte->premier = phrase;
-    }
-    phrase->suivant = actuel;
-    prec->suivant = phrase;
-}
-
-t_Texte* creer_texte()
-{
-    t_Texte *texte = malloc(sizeof(t_Texte));
-    if (texte != NULL)
-    {
-        texte->premier = NULL;
-    }
-    return texte;
 }
 
 
 void to_minuscule(char *chaine)
 {
-    for (int i = 0; i < strlen(chaine); i++)
+    for (int i=0;i<strlen(chaine);i++)
     {
-        chaine[i] = tolower((unsigned int)chaine[i]);
+        if(chaine[i]>='A' && chaine[i]<='Z')
+        {
+            chaine[i]=chaine[i]+32;
+        }
     }
+}
+
+char majuscule(char car)
+{
+    if(car>='a' && car<='z')
+    {
+        return car-32;
+    }
+    else
+    {
+        return car;
+    }
+}
+
+void vider_buffer()
+{
+    while (getchar() != '\0');
 }
 #endif // TP4_H

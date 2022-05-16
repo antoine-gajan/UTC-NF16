@@ -1,35 +1,103 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "tp4.h";
+#include "tp4.h"
 
 int main()
 {
-    /*t_ListePositions* liste = creer_liste_positions();
-    ajouter_position(liste, 2, 44, 2, 1);
-    ajouter_position(liste, 1,1,3,1);
-    ajouter_position(liste, 2,10,4,1);
-    printf("Nb element : %d\n", liste->nb_elements);
-    t_Position *a = liste->debut;
-    while (a != NULL)
-    {
-        printf("Ligne : %d, oRDRE : %d\n", a->numero_ligne, a->ordre);
-        a = a->suivant;
-    }*/
-    //t_Index *i = creer_index();
-    //t_Noeud *n;
-    char *mot = "Bonjour";
-    printf("%s, %d\n", mot, strlen(mot));
-    to_minuscule(mot);
-    printf("%s", mot);
-   /* n->filsDroit = NULL;
-    n->filsGauche = NULL;
-    n->nb_occurences = 0;
-    n->positions.debut = NULL;
-    n->positions.nb_elements = 0;
-    ajouter_noeud(i, n);
-    printf("%d, %s\n", i->racine, i->racine->mot);
-    //afficher_index(i);
-    //printf("%d", rechercher_mot(i, "Bonjour"));
-    //afficher_index(i);*/
+    //Création de l'index et du texte à restituer
+    t_Index *index = creer_index();
+    int reponse = -1;
+    // Menu principal
+    while(reponse != 8){
+        printf("\n*** INDEXATION ET RECHERCHE DANS UN FICHIER ***\n");
+        printf("1. Charger un fichier\n");
+        printf("2. Caractéristiques de l'index\n");
+        printf("3. Afficher l'index\n");
+        printf("4. Rechercher un mot\n");
+        printf("5. Afficher le mot avec le maximum d'apparition\n");
+        printf("6. Afficher les occurences d'un mot\n");
+        printf("7. Construire le texte a partir de l'index\n");
+        printf("8. Quitter\n");
+
+        // Demande du choix
+        do{
+        printf("\nVotre choix : ");
+        scanf("%d", &reponse);
+        } while(reponse < 1 || reponse > 8);
+
+        // Cas différent en fonction de la réponse
+        switch(reponse)
+        {
+            case 1:
+                printf("\n=== Charger un fichier ===\n");
+                char filename[100];
+                //while (getchar() != '\n');
+                printf("\nNom du fichier a charger : ");
+                scanf("%s", filename);
+                printf("\n");
+                if (indexer_fichier(index, filename) != 0)
+                {
+                    printf("\nFichier charge avec succes\n");
+                }
+                sleep(1);
+                break;
+            case 2:
+                printf("\n=== Caracteristiques de l'index ===\n");
+                printf("Nombre de mots différents : %d\n", index->nb_mots_differents);
+                printf("Nombre de mots (total) : %d\n", index->nb_mots_total);
+                printf("Hauteur de l'arbre : ");
+                sleep(1);
+                break;
+            case 3:
+                printf("\n=== Afficher l'index ===\n");
+                afficher_index(index);
+                sleep(5);
+                break;
+            case 4:
+                printf("\n=== Rechercher un mot ===\n");
+                char mot[100];
+                printf("\nEntrez le mot à rechercher: ");
+                scanf("%s", mot);
+                t_Noeud *noeud = rechercher_mot(index, mot);
+                if(noeud != NULL)
+                {
+                    printf("\nLe mot '%s' est present %d fois dans l'index.\nIl apparait :\n", mot, noeud->nb_occurences);
+                    t_Position *position = noeud->positions->debut;
+                    while (position != NULL)
+                    {
+                        printf("  - Ligne %d, ordre %d, phrase %d\n", position->numero_ligne, position->ordre, position->numero_phrase);
+                        position = position->suivant;
+                    }
+                }
+                else
+                {
+                    printf("\nLe mot '%s' n'est pas present dans l'index.\n", mot);
+                }
+                sleep(5);
+                break;
+            case 5:
+                printf("\n=== Afficher le mot avec le maximum d'apparition ===\n");
+                afficher_max_apparition(index);
+                sleep(5);
+                break;
+            case 6:
+                printf("\n=== Afficher les occurences d'un mot === \n");
+                char mot_occurences[100];
+                printf("Mot à rechercher : ");
+                scanf("%s", mot_occurences);
+                afficher_occurences_mot(index, mot_occurences);
+                sleep(5);
+                break;
+            case 7:
+                printf("\n=== Construire le texte a partir de l'index ===\n");
+                construire_texte(index, filename);
+                sleep(5);
+                break;
+            case 8:
+                printf("\nVous allez quitter le programme.\n");
+                sleep(2);
+                break;
+        }
+    }
     return 0;
 }
