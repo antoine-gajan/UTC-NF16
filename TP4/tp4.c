@@ -120,10 +120,12 @@ t_Noeud* rechercher_mot(t_Index *index, char *mot)
 
 int ajouter_noeud(t_Index *index, t_Noeud *noeud)
 {
+    //Si un noeud avec le même mot existe déjà, on n'ajoute pas le noeud et renvoie une erreur
     if(rechercher_mot(index,noeud->mot)==NULL)
     {
         t_Noeud *pere=NULL;
         t_Noeud *actuel=index->racine;
+        //Parcours de l'arbre pour trouver où ajouter le noeud
         while(actuel!=NULL)
         {
             pere=actuel;
@@ -136,10 +138,12 @@ int ajouter_noeud(t_Index *index, t_Noeud *noeud)
                 actuel=actuel->filsDroit;
             }
         }
+        //Si le père est NULL, on ajoute le noeud à la racine
         if(pere==NULL)
         {
             index->racine = noeud;
         }
+        //Sinon on regarde si c'est le fils gauche ou droit du père
         else
         {
             if(strcmp(pere->mot,noeud->mot) > 0)
@@ -153,6 +157,7 @@ int ajouter_noeud(t_Index *index, t_Noeud *noeud)
         }
         return 1;
     }
+    //Affichage code erreur
     else
     {
         printf("Erreur: noeud dejà existant\n");
@@ -160,8 +165,10 @@ int ajouter_noeud(t_Index *index, t_Noeud *noeud)
     }
 }
 
+//Fonction qui indexe le fichier dans un ABR
 int indexer_fichier(t_Index *index, char *filename)
 {
+    //Définition des variables
     int nb_mots=1;
     int num_phrase=1;
     FILE* fichier = NULL;
@@ -173,47 +180,53 @@ int indexer_fichier(t_Index *index, char *filename)
     t_Phrase *ligne_courante=NULL;
     int nouvelle_ligne=1;
 
+    //Ouverture du fichier
     fichier = fopen(filename, "r");
-
+    //Si l'ouverture du fichier a réussi, on lit le fichier
     if (fichier != NULL)
     {
         int ligne=1;
         int ordre;
         const char *sep = " ";
-
+        //Lecture du fichier ligne par ligne
         while (fgets(chaine, TAILLE_MAX, fichier) != NULL)
         {
             ordre=1;
+            //Conversion de la chaine en minuscule
             to_minuscule(chaine);
-            printf("Ligne %d : %s\n", ligne, chaine); //Test debug
 
+            //Si la chaine comporte un point ou un \n, c'est soit fin de phrase, soit fin de ligne
             taille = strlen(chaine);
             if (chaine[taille - 1] == '\n')
             {
+                //Suppression du \n en fin de chaine
                 chaine[taille - 1] = '\0';
             }
-
+            //Extraction d'un mot de la ligne
             char *mot = strtok (chaine, sep);
+            //Tant qu'on n'est pas en fin de ligne
             while (mot != NULL)
             {
                 taille = strlen(mot);
                 if (mot[taille-1] == '.')
                 {
+                    //On remplace le . de fin de phrase
                     mot[taille - 1] = '\0';
                     changer_phrase=1;
                 }
-
-                printf ("Mot ajoute : %s\n", mot); //test debug
 
                 t_Noeud *noeud = rechercher_mot(index, mot);
 
                 //Si le mot n'est pas dans l'index, creation du noeud
                 if (noeud==NULL)
                 {
+                    //Allocation dynamique du noeud
                     noeud=malloc(sizeof(t_Noeud));
+                    //Création de la liste de positions
                     t_ListePositions *listeP = creer_liste_positions();
                     if(noeud != NULL && listeP != NULL)
                     {
+                        //Ajout des attributs
                         noeud->mot = malloc(sizeof(mot));
                         strcpy(noeud->mot, mot);
 
@@ -221,12 +234,12 @@ int indexer_fichier(t_Index *index, char *filename)
 
                         noeud->filsGauche=NULL;
                         noeud->filsDroit=NULL;
-
+                        //Ajout de la position du mot à la liste des positions du mot
                         ajouter_position(listeP, ligne, ordre, num_phrase);
                         noeud->positions = listeP;
-
+                        //Ajout du noeud à l'index
                         ajouter_noeud(index, noeud);
-
+                        //Mise à jour des attributs de l'index
                         index->nb_mots_differents++;
                         index->nb_mots_total++;
                     }
@@ -241,36 +254,43 @@ int indexer_fichier(t_Index *index, char *filename)
                 {
                     noeud->nb_occurences++;
                     ajouter_position(noeud->positions, ligne, ordre, num_phrase);
+                    //Modification des attributs de l'index
                     index->nb_mots_total++;
                 }
-
+                //Si une nouvelle phrase doit être crée (changement de la valeur du booléen à l'itération précédente)
                 if (nouvelle_phrase==1)
                 {
                     phrase_courante = initialiser_phrase(mot);
                     nouvelle_phrase=0;
                 }
+                //Sinon, on ajoute le mot à la phrase courante
                 else
                 {
                     ajouter_mot(phrase_courante,mot);
                 }
-
+                //Si un une nouvelle ligne doit être crée, on l'initialise avec le premier mot de la ligne
                 if (nouvelle_ligne==1)
                 {
                     ligne_courante = initialiser_phrase(mot);
                     nouvelle_ligne=0;
                 }
+                //Sinon on ajoute le mot à la ligne courante
                 else
                 {
                     ajouter_mot(ligne_courante,mot);
                 }
-
+                //Extraction du mot suivant
                 mot = strtok(NULL, sep);
                 ordre++;
                 nb_mots++;
+                //Si un . a été rencontré avant, changement de phrase
                 if (changer_phrase==1)
                 {
+                    //On ajoute la phrase complète à l'index
                     ajouter_phrase(index,phrase_courante);
+                    //Incrémentation du numéro de phrase
                     num_phrase++;
+                    //Mise à jour des booléens
                     changer_phrase = 0;
                     nouvelle_phrase=1;
                 }
@@ -333,12 +353,9 @@ void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car)
     {
         printf("\n%c\n", majuscule((noeud->mot)[0]));
         *dernier_car = majuscule((noeud->mot)[0]);
-        afficheNoeud(noeud);
     }
-    else
-    {
-        afficheNoeud(noeud);
-    }
+    //Affichage du noeud
+    afficheNoeud(noeud);
     // Parcours du sous arbre droit
     parcours_infixe_affichage(noeud->filsDroit, dernier_car);
 }
@@ -420,11 +437,14 @@ t_Noeud* max_occurences(t_Noeud *noeud)
     }
 }
 
+//Fonction pour initialiser une phrase avec un mot
 t_Phrase *initialiser_phrase(char * mot)
 {
-    t_Phrase *phrase = malloc(sizeof(phrase));
+    //Allocation dynamique de la mémoire
+    t_Phrase *phrase = malloc(sizeof(t_Phrase));
     if (phrase != NULL)
     {
+        //Ajout des attributs (et allocation dynamique pour le mot)
         phrase->mot = malloc(strlen(mot) * sizeof(char));
         strcpy(phrase->mot, mot);
         phrase->suivant = NULL;
@@ -432,32 +452,40 @@ t_Phrase *initialiser_phrase(char * mot)
     return phrase;
 }
 
-void ajouter_mot(t_Phrase *liste, char *mot)
+//Fonction pour ajouter un mot à une phrase
+void ajouter_mot(t_Phrase *phrase, char *mot)
 {
-    if (liste != NULL)
+    if (phrase != NULL)
     {
-        if (liste->suivant == NULL)
+        //Si pas de phrase suivante crée, on en initialise une nouvelle avec le mot courant
+        if (phrase->suivant == NULL)
         {
-            liste->suivant = initialiser_phrase(mot);
+            phrase->suivant = initialiser_phrase(mot);
         }
+        //Sinon, on ajoute le mot à la phrase suivante déjà crée
         else
         {
-            ajouter_mot(liste->suivant, mot);
+            ajouter_mot(phrase->suivant, mot);
         }
     }
 }
 
+//Fonction pour ajouter une phrase à l'index
 void ajouter_phrase(t_Index *index, t_Phrase *phrase)
 {
+    //Allocation dynamique de la mémoire pour la liste de phrases
     t_ListePhrases * nouv = malloc(sizeof(t_ListePhrases));
     if (nouv != NULL)
     {
+        //Ajout des attributs
         nouv->phrase = phrase;
         nouv->suivant = NULL;
+        //Si pas de listes de phrases présente, on l'ajoute en début de liste
         if (index->liste_phrases == NULL)
         {
             index->liste_phrases = nouv;
         }
+        //Sinon on parcourt la liste et on l'ajoute en fin de liste
         else
         {
             t_ListePhrases *courant = index->liste_phrases;
@@ -470,17 +498,22 @@ void ajouter_phrase(t_Index *index, t_Phrase *phrase)
     }
 }
 
+//Fonction qui permet d'ajouter une ligne à une phrase
 void ajouter_ligne(t_Index *index, t_Phrase *p)
 {
+    //Allocation dynamique d'une nouvelle phrase
     t_ListePhrases * nouv = malloc(sizeof(t_ListePhrases));
     if (nouv != NULL)
     {
+        //Ajout des attributs
         nouv->phrase = p;
         nouv->suivant = NULL;
+        //Si la liste de lignes est vide, on l'ajoute au début
         if (index->liste_lignes == NULL)
         {
             index->liste_lignes = nouv;
         }
+        //Sinon on l'ajoute en fin de liste
         else
         {
             t_ListePhrases *courant = index->liste_lignes;
@@ -493,19 +526,26 @@ void ajouter_ligne(t_Index *index, t_Phrase *p)
     }
 }
 
+//Fonction qui affiche les occurences d'un mot
 void afficher_occurences_mot(t_Index *index, char *mot)
 {
+    //Déclaration des variables
     int debut_phrase;
     int i = 1;
     t_ListePhrases *p = index->liste_phrases;
     t_Phrase *m = NULL;
+    //Mise en minuscule du mot
     to_minuscule(mot);
     t_Noeud *noeud = rechercher_mot(index, mot);
+    //Si le mot existe bien dans l'ABR
     if (noeud != NULL)
     {
+        //Mise en mjuscule de la première lettre du mot
         mot[0] = majuscule(mot[0]);
+        //Affichage
         printf("Mot = \"%s\"\n", mot);
         printf("Occurences = %d\n", noeud->nb_occurences);
+        //Parcours des positions et affichage
         t_Position *pos = noeud->positions->debut;
         while (pos != NULL)
         {
@@ -515,10 +555,13 @@ void afficher_occurences_mot(t_Index *index, char *mot)
                 p = p->suivant;
                 i++;
             }
+            //Affichage du numéro de ligne et d'ordre du mot
             printf("| Ligne %d, mot %d : ", pos->numero_ligne, pos->ordre);
             m = p->phrase;
+            //Affichage des mots de la phrase
             while (m != NULL)
             {
+                //Si c'est le premier mot de la phrase, on le met en majuscule
                 if (debut_phrase)
                 {
                     m->mot[0] = majuscule(m->mot[0]);
@@ -526,16 +569,20 @@ void afficher_occurences_mot(t_Index *index, char *mot)
                     to_minuscule(m->mot);
                     debut_phrase = 0;
                 }
+                //Sinon on affiche juste le mot
                 else
                 {
                     printf("%s", m->mot);
                 }
+                //Ajout d'un espace entre les mots
                 if (m->suivant != NULL)
                 {
                     printf(" ");
                 }
+                //Passage au mot suivant
                 m = m->suivant;
             }
+            //En fin de ligne, on ajoute le point et le \n
             printf(".\n");
             pos = pos->suivant;
         }
@@ -546,61 +593,79 @@ void afficher_occurences_mot(t_Index *index, char *mot)
     }
 }
 
+//Fonction qui construit le texte et l'écrit dans un nouveau fichier
 void construire_texte(t_Index *index, char *filename)
 {
     int debut_phrase = 1;
-    FILE *f = fopen(filename, "w");
-    if (f != NULL)
+    //Ouverture du fichier en écriture
+    FILE *fichier = fopen(filename, "w");
+    //Si l'ouverture a fonctionné
+    if (fichier != NULL)
     {
+        //Initialisation de l et lp, qui représentent la liste de lignes et la liste de phrases
         t_ListePhrases *l = index->liste_lignes;
         t_ListePhrases *lp = index->liste_phrases;
+        //m est le premier mot de la phrase
         t_Phrase *m = lp->phrase;
-
+        //Tant qu'il reste des lignes à écrire
         while (l != NULL)
         {
             t_Phrase *p = l->phrase;
+            //Tant qu'il reste des mots à écrire
             while (p != NULL)
             {
+                //Si on n'est pas en fin de phrase (il y a encore des mots après)
                 if (m->suivant != NULL)
                 {
                     m = m->suivant;
+                    //Si on est en début de phrase
                     if (debut_phrase == 1)
                     {
+                        //On met la première lettre en majuscule
                         p->mot[0] = majuscule(p->mot[0]);
-                        fprintf(f, "%s ", p->mot);
+                        fprintf(fichier, "%s ", p->mot);
                         to_minuscule(p->mot);
+                        //Mise à jour du booléen début_phrase à 0
                         debut_phrase = 0;
                     }
+                    //Sinon on écrit le mot en minuscule
                     else
                     {
-                        fprintf(f, "%s ", p->mot);
+                        fprintf(fichier, "%s ", p->mot);
                     }
                 }
+                //Si on est en fin de phrase
                 else
                 {
                     lp = lp->suivant;
+                    //On initialise m avec le premier mot de la phrase suivante
                     if (lp != NULL)
                     {
                         m = lp->phrase;
                     }
+                    //Cas particulier : c'est une phrase constituée d'un seul mot
                     if (debut_phrase == 1)
                     {
                         p->mot[0] = majuscule(p->mot[0]);
-                        fprintf(f, "%s. ", p->mot);
+                        fprintf(fichier, "%s. ", p->mot);
                         to_minuscule(p->mot);
                     }
+                    //Si on est en fin de phrase "classique", on ajoute le point à la fin du mot et l'espace qui suit
                     else
                     {
-                        fprintf(f, "%s. ", p->mot);
+                        fprintf(fichier, "%s. ", p->mot);
                         debut_phrase = 1;
                     }
                 }
+                //Passage à la phrase suivante
                 p = p->suivant;
             }
-            fprintf(f, "\n");
+            //Passage à la ligne suivante
+            fprintf(fichier, "\n");
             l = l->suivant;
         }
-        fclose(f);
+        //Fermeture du fichier
+        fclose(fichier);
     }
     else
     {
@@ -608,9 +673,10 @@ void construire_texte(t_Index *index, char *filename)
     }
 }
 
-
+//Fonction qui transforme une chaine en minuscule
 void to_minuscule(char *chaine)
 {
+    //Parcours de chaque lettre et mise en minuscule
     for (int i=0;i<strlen(chaine);i++)
     {
         if(chaine[i]>='A' && chaine[i]<='Z')
@@ -620,6 +686,7 @@ void to_minuscule(char *chaine)
     }
 }
 
+//Fonction qui renvoie le caractère majuscule correspondant
 char majuscule(char car)
 {
     if(car>='a' && car<='z')
@@ -632,6 +699,7 @@ char majuscule(char car)
     }
 }
 
+//Fonction pour vider le buffer
 void vider_buffer()
 {
     while (getchar() != '\0');

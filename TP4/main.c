@@ -31,7 +31,7 @@ int main()
             case 1:
                 printf("\n=== Charger un fichier ===\n");
                 char filename[100];
-                //while (getchar() != '\n');
+                while (getchar() != '\n');
                 printf("\nNom du fichier a charger : ");
                 scanf("%s", filename);
                 printf("\n");
@@ -56,12 +56,12 @@ int main()
             case 4:
                 printf("\n=== Rechercher un mot ===\n");
                 char mot[100];
-                printf("\nEntrez le mot à rechercher: ");
+                printf("\nEntrez le mot à rechercher : ");
                 scanf("%s", mot);
                 t_Noeud *noeud = rechercher_mot(index, mot);
                 if(noeud != NULL)
                 {
-                    printf("\nLe mot '%s' est present %d fois dans l'index.\nIl apparait :\n", mot, noeud->nb_occurences);
+                    printf("\nLe mot '%s' est present %d fois dans l'arbre.\nListe de ses occurences :\n", mot, noeud->nb_occurences);
                     t_Position *position = noeud->positions->debut;
                     while (position != NULL)
                     {
@@ -90,6 +90,7 @@ int main()
                 break;
             case 7:
                 printf("\n=== Construire le texte a partir de l'index ===\n");
+                scanf("%s", filename);
                 construire_texte(index, filename);
                 sleep(5);
                 break;
