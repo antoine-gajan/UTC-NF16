@@ -31,7 +31,8 @@ int main()
             case 1:
                 printf("\n=== Charger un fichier ===\n");
                 char filename[100];
-                while (getchar() != '\n');
+                //Vider le buffer par sécurité
+                vider_buffer();
                 printf("\nNom du fichier a charger : ");
                 scanf("%s", filename);
                 printf("\n");
@@ -45,7 +46,15 @@ int main()
                 printf("\n=== Caracteristiques de l'index ===\n");
                 printf("Nombre de mots différents : %d\n", index->nb_mots_differents);
                 printf("Nombre de mots (total) : %d\n", index->nb_mots_total);
-                printf("Hauteur de l'arbre : ");
+                printf("Hauteur de l'arbre : %d\n", hauteur(index->racine));
+                if (equilibre(index->racine))
+                {
+                    printf("L'arbre est equilibre.\n");
+                }
+                else
+                {
+                    printf("L'arbre n'est pas equilibre.\n");
+                }
                 sleep(1);
                 break;
             case 3:
@@ -83,19 +92,22 @@ int main()
             case 6:
                 printf("\n=== Afficher les occurences d'un mot === \n");
                 char mot_occurences[100];
-                printf("Mot à rechercher : ");
+                printf("Mot a rechercher : ");
                 scanf("%s", mot_occurences);
                 afficher_occurences_mot(index, mot_occurences);
                 sleep(5);
                 break;
             case 7:
                 printf("\n=== Construire le texte a partir de l'index ===\n");
+                printf("Nom du fichier dans lequel vous souhaitez ecrire : ");
+                vider_buffer();
                 scanf("%s", filename);
                 construire_texte(index, filename);
                 sleep(5);
                 break;
             case 8:
-                printf("\nVous allez quitter le programme.\n");
+                libererIndex(index);
+                printf("\nMemoire liberee.\nVous allez quitter le programme.\n");
                 sleep(2);
                 break;
         }

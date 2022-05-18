@@ -363,9 +363,10 @@ void parcours_infixe_affichage(t_Noeud *noeud, char *dernier_car)
 void afficher_max_apparition(t_Index *index)
 {
     //Si l'arbre est vide
-    if (index == NULL)
+    if (index == NULL || index->racine == NULL)
     {
         printf("L'arbre est vide.\n");
+        return;
     }
     //Recherche du noeud dont le mot apparait le plus souvent
     t_Noeud *noeud_max = max_occurences(index->racine);
@@ -380,61 +381,66 @@ void afficher_max_apparition(t_Index *index)
 //Fonction récursive qui renvoie le noeud ayant le maximum d'occurences sur un arbre
 t_Noeud* max_occurences(t_Noeud *noeud)
 {
-    //Si le noeud est vide, pas de noeud ayant un mot avec le maximum d'occurences
-    if (noeud == NULL)
+    //Si le noeud est non null
+    if (noeud != NULL)
     {
-        return NULL;
-    }
-    //Recherche du maximum des sous arbres gauche et droite
-    t_Noeud *max_gauche = max_occurences(noeud->filsGauche);
-    t_Noeud *max_droit = max_occurences(noeud->filsDroit);
-
-    //Distinction des cas
-    //Si max_gauche et max_droit sont non NULL, on recherche le max entre le noeud actuel, max_gauche et max_droit
-    if (max_gauche != NULL && max_droit != NULL)
-    {
-        if (noeud->nb_occurences > max_gauche->nb_occurences && noeud->nb_occurences > max_droit->nb_occurences)
+        //Recherche du max dans les sous arbres
+        t_Noeud * max_gauche = max_occurences(noeud->filsGauche);
+        t_Noeud * max_droit = max_occurences(noeud->filsDroit);
+        //Distinction des cas pour trouver le max
+        if (max_gauche != NULL && max_droit != NULL)
         {
-            return noeud;
+            if (max_gauche->nb_occurences > max_droit->nb_occurences)
+            {
+                if (noeud->nb_occurences > max_gauche->nb_occurences)
+                {
+                    return noeud;
+                }
+                else
+                {
+                    return max_gauche;
+                }
+            }
+            else
+            {
+                if (noeud->nb_occurences > max_droit->nb_occurences)
+                {
+                    return noeud;
+                }
+                else
+                {
+                    return max_droit;
+                }
+            }
         }
-        else if (max_gauche->nb_occurences > noeud->nb_occurences && max_gauche->nb_occurences > max_droit->nb_occurences)
+        else if (max_gauche != NULL)
         {
-            return max_gauche;
+            if (noeud->nb_occurences > max_gauche->nb_occurences)
+            {
+                return noeud;
+            }
+            else
+            {
+                return max_gauche;
+            }
+        }
+        else if (max_droit != NULL)
+        {
+            if (noeud->nb_occurences > max_droit->nb_occurences)
+            {
+                return noeud;
+            }
+            else
+            {
+                return max_droit;
+            }
         }
         else
         {
-            return max_droit;
-        }
-    }
-    //Si max_gauche est NULL, on recherche le max entre le noeud actuel et max_droit
-    else if (max_gauche == NULL)
-    {
-        if (max_droit->nb_occurences > noeud->nb_occurences)
-        {
-            return max_droit;
-        }
-        else
-        {
             return noeud;
         }
     }
-    //Si max_droit est NULL, on recherche le max entre le noeud actuel et max_gauche
-    else if (max_droit == NULL)
-    {
-        if (max_gauche->nb_occurences > noeud->nb_occurences)
-        {
-            return max_gauche;
-        }
-        else
-        {
-            return noeud;
-        }
-    }
-    //Sinon, on retourne le noeud père, seul noeud de l'arbre car on a atteint une feuille
-    else
-    {
-        return noeud;
-    }
+    return NULL;
 }
 
 //Fonction pour initialiser une phrase avec un mot
@@ -598,7 +604,8 @@ void construire_texte(t_Index *index, char *filename)
 {
     int debut_phrase = 1;
     //Ouverture du fichier en écriture
-    FILE *fichier = fopen(filename, "w");
+    FILE *fichier;
+    fichier = fopen(filename, "w");
     //Si l'ouverture a fonctionné
     if (fichier != NULL)
     {
@@ -699,9 +706,109 @@ char majuscule(char car)
     }
 }
 
+int hauteur(t_Noeud *racine)
+{
+    //Si l'arbre est vide, la hauteur vaut -1
+    if (racine == NULL)
+    {
+        return -1;
+    }
+    //Si on est au niveau d'une feuille, la hauteur vaut 0
+    else if (racine->filsGauche == NULL && racine->filsDroit == NULL)
+    {
+        return 0;
+    }
+    else
+    {
+        int hauteur_gauche = hauteur(racine->filsGauche);
+        int hauteur_droite = hauteur(racine->filsDroit);
+        if (hauteur_droite > hauteur_gauche)
+        {
+            return 1 + hauteur_droite;
+        }
+        else
+        {
+            return 1 + hauteur_gauche;
+        }
+    }
+}
+
+int equilibre(t_Noeud *racine)
+{
+    if (racine == NULL)
+    {
+        return 1;
+    }
+    else if (hauteur(racine->filsGauche) - hauteur(racine->filsDroit) >= -1 && hauteur(racine->filsGauche) - hauteur(racine->filsDroit) <= 1)
+    {
+        return equilibre(racine->filsGauche) && equilibre(racine->filsDroit);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+void libererIndex(t_Index *index)
+{
+    //Libération de l'arbre
+    libererArbre(index->racine);
+    //Liberation des liste de phrases
+    free(index->liste_lignes);
+    free(index->liste_phrases);
+    //Libération de l'index
+    free(index);
+
+}
+
+void libererArbre(t_Noeud *racine)
+{
+    if (racine != NULL)
+    {
+        //Liberation des sous arbres gauche et droit
+        libererArbre(racine->filsGauche);
+        libererArbre(racine->filsDroit);
+        //Libération de la liste des positions
+        t_Position *pos = racine->positions->debut;
+        while (pos != NULL)
+        {
+            t_Position *copie = pos;
+            pos = pos->suivant;
+            free(copie);
+        }
+        free(racine->positions);
+        //Libération du noeud
+        free(racine);
+    }
+}
+
+void libererListePhrases(t_ListePhrases *liste)
+{
+    t_Phrase *p = liste->phrase;
+
+    while (p != NULL)
+    {
+        t_Phrase *copie = p;
+        p = p->suivant;
+        libererPhrase(copie);
+    }
+    free(liste);
+}
+
+void libererPhrase(t_Phrase *p)
+{
+    while (p != NULL)
+    {
+        t_Phrase *copie = p;
+        p = p->suivant;
+        free(copie->mot);
+        free(copie);
+    }
+}
+
 //Fonction pour vider le buffer
 void vider_buffer()
 {
-    while (getchar() != '\0');
+    while (getchar() != '\n');
 }
 #endif // TP4_H

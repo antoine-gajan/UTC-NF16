@@ -98,6 +98,18 @@ void construire_texte(t_Index *index, char *filename);
 
 void to_minuscule(char *chaine);
 char majuscule(char c);
+int hauteur(t_Noeud *racine);
+int equilibre(t_Noeud *racine);
+
+//Libération de mémoire
+void libererIndex(t_Index *index);
+void libererArbre(t_Noeud *racine);
+void libererListePhrases(t_ListePhrases *liste);
+void libererPhrase(t_Phrase *p);
+void vider_buffer();
+
+
+
 
 
 
