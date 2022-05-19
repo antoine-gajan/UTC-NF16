@@ -739,7 +739,7 @@ int equilibre(t_Noeud *racine)
     {
         return 1;
     }
-    else if (hauteur(racine->filsGauche) - hauteur(racine->filsDroit) >= -1 && hauteur(racine->filsGauche) - hauteur(racine->filsDroit) <= 1)
+    else if (abs(hauteur(racine->filsGauche) - hauteur(racine->filsDroit)) <= 1)
     {
         return equilibre(racine->filsGauche) && equilibre(racine->filsDroit);
     }
