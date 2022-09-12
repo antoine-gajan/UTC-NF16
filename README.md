@@ -1,6 +1,6 @@
 <h1>UTC - NF16</h1>
 
-Ce dépôt GitHub contient l'ensemble des TP de l'UV N16 (Algorithmique et Programmation en C) de l'UTC réalisée en P22.
+Ce dépôt GitHub contient l'ensemble des TP de l'UV NF16 (Algorithmique et Programmation en C) de l'UTC réalisée en P22.
 
 <ins>__Notions abordées :__</ins>
 
