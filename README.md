@@ -1,10 +1,24 @@
-<h1>UTC - NF16</h1>
+# UTC - NF16
 
-Ce dépôt GitHub contient l'ensemble des TP de l'UV NF16 (Algorithmique et Programmation en C) de l'UTC réalisée en P22.
+## 💻︎ Contenu du repository :
 
-<ins>__Notions abordées :__</ins>
+Ce dépôt GitHub contient le code source des TDs et TPs de l'UV NF16 (Algorithmique et Programmation en C) au semestre P22. 
 
-* Fonctions
-* Passage par référence et par adresse
-* Pointeurs
-* Structures de données (listes chainées, piles, files)
+
+## 🎯 Objectifs de l'UV :
+
+L'UV donne des connaissances transversales dans les domaines suivants : 
+- Elaborer des algorithmes de résolution et choisir les structures de données adaptées
+- Evaluer les complexités algorithmiques à la fois temporelle et spatiale
+- Etudier différents algorithmes et structures de données (tableau, listes chaînées, pile, file, arbres binaires de recherche, graphes, tri, hashcode)
+- Mettre en œuvre dans un langage de programmation donné
+
+
+## 🧑‍💻 Technologie utilisée :
+
+Le langage C est utilisé dans l'UV.
+
+
+## 💡Liens utiles :
+
+Lien vers la page Moodle de l'UV (nécessite d'être connecté pour y accéder): [UTC-NF16](	https://moodle.utc.fr/course/view.php?name=NF16)
